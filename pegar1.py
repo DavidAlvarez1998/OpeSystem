@@ -232,9 +232,9 @@ def copiarOrden(rutaDatos):
             
             if len(data) < len(trades):#se cerro orden
                 trades=queOrdenSeCerro(data,trades)
-            time.sleep(0.1)
+            time.sleep(0.2)
         except:
-            time.sleep(0.1)
+            time.sleep(0.2)
 
 copiarOrden(rutaDatos)
  
