@@ -5,30 +5,30 @@ import os
 
 
 
-
 '''
 cuenta=61129885
 contraseña="qB0fnmv3"
 servidor="mt5-demo01.pepperstone.com"
-rutaTerminal="C:/Users/adjua/Desktop/Terminales/MIO/metaC/terminal64.exe"#ruta terminal
-rutaDatos='C:/Users/adjua/Desktop/Terminales/MIO/DATA'#ruta data
+rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/copiar/terminal64.exe')#ruta terminal
+rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
 
 '''
+mensaje="cuenta copiar julian: "
 #---------------------------------------------DATOS COPIAR--------------------------------------------
 
 cuenta=7140257
 contraseña="p6ifHZXG"
 servidor="ICMarketsSC-MT5-2"
-rutaTerminal="C:/Users/adjua/Desktop/Terminales/MIO/metaC/terminal64.exe"#ruta terminal
-rutaDatos='C:/Users/adjua/Desktop/Terminales/MIO/DATA'#ruta data
+rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/copiar/terminal64.exe')#ruta terminal
+rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
 
 #-----------------------------------------------------------------------------------------------------
 
 
 if autorizar:
-    print("CUENTA MIA COPIAR JULIAN: "+str(cuenta))
+    print(mensaje+str(cuenta))
 else:
     print("error el terminal", mt5.last_error())
     quit()

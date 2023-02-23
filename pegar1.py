@@ -10,18 +10,19 @@ import time
 cuenta=61126871
 contraseña="uj0xtfr3"
 servidor="mt5-demo01.pepperstone.com"
-rutaTerminal="C:/Users/adjua/Desktop/Terminales/MIO/metaP1/terminal64.exe"#ruta terminal
-rutaDatos='C:/Users/adjua/Desktop/Terminales/MIO/DATA'#ruta data
+rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/pegar1/terminal64.exe')#ruta terminal
+rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
 
 '''
+mensaje="cuenta pegar1 reni: "
 #---------------------------------------------DATOS PEGAR1--------------------------------------------
 
 cuenta=7147703
 contraseña="1IbCicPb"
 servidor="ICMarketsSC-MT5-2"
-rutaTerminal="C:/Users/adjua/Desktop/Terminales/MIO/metaP1/terminal64.exe"#ruta terminal
-rutaDatos='C:/Users/adjua/Desktop/Terminales/MIO/DATA'#ruta data
+rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/pegar1/terminal64.exe')#ruta terminal
+rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
 
 #-----------------------------------------------------------------------------------------------------
@@ -29,7 +30,7 @@ autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=s
 
 
 if autorizar:
-    print("CUENTA MiA PEGAR1 RENI : "+str(cuenta))
+    print(mensaje+str(cuenta))
 else:
     print("error el terminal", mt5.last_error())
     quit()
