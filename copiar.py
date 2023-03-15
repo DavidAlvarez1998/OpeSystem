@@ -14,12 +14,12 @@ rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta d
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
 
 '''
-mensaje="cuenta copiar julian: "
+mensaje="cuenta copiar Noah: "
 #---------------------------------------------DATOS COPIAR--------------------------------------------
 
-cuenta=7140257
-contraseña="p6ifHZXG"
-servidor="ICMarketsSC-MT5-2"
+cuenta=300371831
+contraseña="vmdmrufg34"
+servidor="TradersGlobalGroup-Demo"
 rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/copiar/terminal64.exe')#ruta terminal
 rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)

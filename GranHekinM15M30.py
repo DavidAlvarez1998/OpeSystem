@@ -4,6 +4,27 @@ import numpy as np
 import time 
 import threading
 from datetime import datetime as dt
+import pygame
+import os
+
+
+
+#-----------------------------------------reproducir Mp3-----------------------------------------------
+
+def repro():
+
+    archivo=os.path.join(os.path.dirname(os.path.abspath(__file__)),'song.mp3')#ruta data
+    archivo=open(archivo,"r")
+    pygame.mixer.init()
+    sonido = pygame.mixer.Sound(archivo)
+    pygame.mixer.Sound.play(sonido)
+    time.sleep(1)
+    pygame.mixer.Sound.stop(sonido)
+    time.sleep(1)
+    archivo.close()
+
+#-----------------------------------------reproducir Mp3-----------------------------------------------
+
 
 
 
@@ -175,15 +196,27 @@ def ajusteImpusos(data):
 #-----------------------------------------Procesado de velas --------------------------------------------
 
 
+
+
+
 #--------------------------------------toma de velas especificas --------------------------------------
-#me retorna el tipo de vela ultima cerrada en M15 ('alcista','bajista')
-def M15(simbolo):
+#me retorna el tipo de vela ultima cerrada en M15 Heikin Ashi('alcista','bajista')
+def M15Heikin(simbolo):
     data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M15,0,10)))
     data=heikinAshi(data)#Dataframe 
     data=numpyAlist(data)#list[[open,high,low,close]]
     data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
     tipo=data[-6]#penultimo tipo de vela
-    return tipo   
+    return tipo
+
+#me retorna el tipo de vela ultima cerrada en M5 Heikin Ashi('alcista','bajista')
+def M5Heikin(simbolo):
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M5,0,10)))
+    data=heikinAshi(data)#Dataframe 
+    data=numpyAlist(data)#list[[open,high,low,close]]
+    data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
+    tipo=data[-6]#penultimo tipo de vela
+    return tipo  
 
 #retorna el ultimo tipo de vela cerrada en M1
 def M1(simbolo):
@@ -202,12 +235,25 @@ def M1anterior(simbolo):
     data=numpyAlist(data)#list[[open,high,low,close]]
     data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
     tipo=data[-9]#penultimo tipo de vela () 
-    return tipo  
+    return tipo 
+
+#retorna el tipo de vela de la vela anterior anterior a la ultima cerrada
+def M1anteriorAnterior(simbolo):
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,10)))
+    data=joponesa(data)#Dataframe 
+    data=numpyAlist(data)#list[[open,high,low,close]]
+    data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
+    tipo=data[-12]#penultimo tipo de vela () 
+    return tipo 
 #--------------------------------------toma de velas especificas --------------------------------------
 
 
+
+
+
 #-------------------------------------Sistema y Operaciones ---------------------------------------------
-def ordenar(tipo,lote,tp,sl,simbolo):
+def ordenar(tipo,lote,tp,sl,simbolo,comentario):
+    #repro()
     precio=mt5.symbol_info_tick(simbolo).ask
     deviation = 30
     if tipo==1:
@@ -223,7 +269,7 @@ def ordenar(tipo,lote,tp,sl,simbolo):
             "tp": tp,
             "deviation": int(deviation),
             "magic": int(235000),
-            "comment": "python script open",
+            "comment": comentario,
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
@@ -245,7 +291,7 @@ def ordenar(tipo,lote,tp,sl,simbolo):
             "tp": tp,
             "deviation": int(deviation),
             "magic": int(235000),
-            "comment": "python script open",
+            "comment": comentario,
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
@@ -269,7 +315,7 @@ def cerrarOrden(ticket,lote,tipo,simbolo):
             "tp": 0.0,
             "deviation": int(deviation),
             "magic": int(235000),
-            "comment": "python script open",
+            "comment": "",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
@@ -289,7 +335,7 @@ def cerrarOrden(ticket,lote,tipo,simbolo):
             "tp": 0.0,
             "deviation": int(deviation),
             "magic": int(235000),
-            "comment": "python script open",
+            "comment": "",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
@@ -309,21 +355,23 @@ def cuandoCerrar():#actualizado 2.0 actualizacion para cerrar mulples posiciones
                 tipo=posiciones[i][5]
                 lote=posiciones[i][9]
                 simbolo=posiciones[i][16]
-                if tipo==0:
-                    tipo='compra'
-                else:
-                    tipo='venta'
-                            
-                if tipo=='compra':
-                    aux=M15(simbolo)
-                    if aux=='bajista':
-                        cerrarOrden(tikect,lote,tipo,simbolo)
-                        aux=''
-                if tipo=='venta':
-                    aux=M15(simbolo)
-                    if aux=='alcista':
-                        cerrarOrden(tikect,lote,tipo,simbolo)
-                        aux=''
+                comentario=posiciones[i][17]
+                if comentario=="M15":#solo cerrar ordenes con sistema M15
+                    if tipo==0:
+                        tipo='compra'
+                    else:
+                        tipo='venta'
+                                
+                    if tipo=='compra':
+                        aux=M15Heikin(simbolo)
+                        if aux=='bajista':
+                            cerrarOrden(tikect,lote,tipo,simbolo)
+                            aux=''
+                    if tipo=='venta':
+                        aux=M15Heikin(simbolo)
+                        if aux=='alcista':
+                            cerrarOrden(tikect,lote,tipo,simbolo)
+                            aux=''
                 i=i+1
         time.sleep(0.5)
   
@@ -335,15 +383,23 @@ def calculoRiesgo(pips,riesgo):# para el nas100
     while lote*pips<=riesgo:
         lote+=0.01
     lote=round(lote,1)
+    if lote>100:#lotaje maximo permitido es 100
+        lote=100
+    if lote<0.1:#lotaje minimo permitido es 0.1
+        lote=0.1
     return lote
 #-------------------------------------Sistema y Operaciones ---------------------------------------------
 
+
+
+
+
 #-------------------------------------Logica operaciones--------------------------------------------------
 
-def decenas(data):#retorna lista con niveles 1/4 del ultimo impulso
+def niveles14(data):#retorna lista con niveles 1/4 del ultimo impulso
     impulsoAnt=data[-2]
-    highAnt=impulsoAnt[1]#maximo del ultimo impulso 
-    lowAnt=impulsoAnt[2]#minimo del ultimo impulso 
+    highAnt=impulsoAnt[1]#maximo del ultimo impulso finalizado
+    lowAnt=impulsoAnt[2]#minimo del ultimo impulso finalizado
     #print(impulsoAnt[0],highAnt,lowAnt)#muestra ultimo impulso
     nivelesImpulso=[]
     while lowAnt<=highAnt:
@@ -361,15 +417,27 @@ def decenas(data):#retorna lista con niveles 1/4 del ultimo impulso
         lowAnt=lowAnt+1
     return nivelesImpulso
    
-def logica(data,simbolo,riesgo):
-    now=dt.now()
-    m15=M15(simbolo)
+def logicaM15(simbolo,riesgo):
+    comentario="M15"
+    now=(mt5.symbol_info(simbolo)) #data de instrumento
+    now=(dt.utcfromtimestamp(now[10]))#16:30 es la apertura (9:30)
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,200)))#toma de data [time,open,high,low,close...
+    data=joponesa(data)#Dataframe 
+    data=numpyAlist(data)#list[[open,high,low,close]]
+    data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
+    data=agrupacionVelas(data) #list[´alcista´,h,l,h,l,h,l]
+    data=estremosImpulsos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+    data=data1dimecionA2dimenciones(data)#list[[´alcista´,h,l],['bajista',h,l]]
+    data=ajusteImpusos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+    data=data1dimecionA2dimenciones(data)
+    m15=M15Heikin(simbolo)
     m1,close=M1(simbolo)
     M1ant=M1anterior(simbolo)
+    M1antAnt=M1anteriorAnterior(simbolo)
     primero=0
     rompimiento=0
     #el ultimo impulso es varible segun la direccion de la ultima vela no cerrada con respecto a la anterior a ella
-    niveles=decenas(data)#lista de los niveles 1/4 del ultimo impulso
+    niveles=niveles14(data)#lista de los niveles 1/4 del ultimo impulso
     cierreAfavor=0 # variable para determinar si se cerro a favor de la dioreccion con respecto a 1/4
     if m15=='alcista' and m1=='alcista':
         primero=data[-4][2]#le asigno el Low de la penultima impulso bajista
@@ -378,18 +446,14 @@ def logica(data,simbolo,riesgo):
         for x in niveles:
                 if close>=x:
                     cierreAfavor=1
-        if rompimiento<primero and ultimoimpulso==rompimiento and M1ant=='bajista' and cierreAfavor==1:
-            print("compra: "+str(simbolo)+" : "+str(now))# 0 si es compra y 1 si es venta
+        if rompimiento<primero and ultimoimpulso==rompimiento and ((M1ant=='bajista') or (M1ant=='alcista' and M1antAnt=='bajista')) and cierreAfavor==1:
+            print("compra M15: "+str(simbolo)+" : "+str(now))# 0 si es compra y 1 si es venta
             precio=mt5.symbol_info_tick(simbolo).ask
             sl=precio-rompimiento
             tp=sl*2#--------------------------tp
-            lote=int(calculoRiesgo(sl,riesgo))
-            if lote>100:#lotaje maximo permitido es 100
-                lote=100
-            if lote<0.1:#lotaje minimo permitido es 0.1
-                lote=0.1
-            lote=float(lote)
-            print(ordenar(0,lote,tp,sl,simbolo))   
+            lote=calculoRiesgo(sl,riesgo)
+            print(ordenar(0,lote,tp,sl,simbolo,comentario))
+            print(lote)  
 
     if m15=='bajista' and m1=='bajista':
         primero=data[-4][1]#le asigno el high de la penultima impulso alcista
@@ -398,20 +462,94 @@ def logica(data,simbolo,riesgo):
         for x in niveles:
                 if close<=x:
                     cierreAfavor=1
-        if rompimiento>primero and ultimoimpulso==rompimiento and M1ant=='alcista' and cierreAfavor==1:
-            print("venta: "+str(simbolo)+" : "+str(now))#1 si es venta y 0 si es compra 
+        if rompimiento>primero and ultimoimpulso==rompimiento and ((M1ant=='alcista') or (M1ant=='bajista' and M1antAnt=='alcista')) and cierreAfavor==1:
+            print("venta M15: "+str(simbolo)+" : "+str(now))#1 si es venta y 0 si es compra 
             precio=mt5.symbol_info_tick(simbolo).ask
             sl=rompimiento-precio
             tp=sl*2#--------------------------tp
             lote=calculoRiesgo(sl,riesgo)
-            if lote>100:#lotaje maximo permitido es 100
-                lote=100
-            if lote<0.1:#lotaje minimo permitido es 0.1
-                lote=0.1
+            print(ordenar(1,lote,tp,sl,simbolo,comentario))
+            print(lote)             
+
+def logicaM30(simbolo,riesgo):
+    comentario="M30"
+    now=(mt5.symbol_info(simbolo)) #data de instrumento
+    now=(dt.utcfromtimestamp(now[10]))#16:30 es la apertura (9:30)
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,100)))#toma de data [time,open,high,low,close...
+    data=joponesa(data)#Dataframe 
+    data=numpyAlist(data)#list[[open,high,low,close]]
+    data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
+    data=agrupacionVelas(data) #list[´alcista´,h,l,h,l,h,l]
+    data=estremosImpulsos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+    data=data1dimecionA2dimenciones(data)#list[[´alcista´,h,l],['bajista',h,l]]
+    data=ajusteImpusos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+    data=data1dimecionA2dimenciones(data)
+    datam1=data
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M30,0,50)))#toma de data [time,open,high,low,close...
+    data=joponesa(data)#Dataframe 
+    data=numpyAlist(data)#list[[open,high,low,close]]
+    data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
+    data=agrupacionVelas(data) #list[´alcista´,h,l,h,l,h,l]
+    data=estremosImpulsos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+    data=data1dimecionA2dimenciones(data)#list[[´alcista´,h,l],['bajista',h,l]]
+    data=ajusteImpusos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+    data=data1dimecionA2dimenciones(data)
+    datam30=data
+    m1,close=M1(simbolo)
+    M5He=M5Heikin(simbolo)
+    M1ant=M1anterior(simbolo)
+    M1antAnt=M1anteriorAnterior(simbolo)
+    cierreAfavor=0
+    niveles=niveles14(datam1)#lista de los niveles 1/4 del ultimo impulso
+    precio=mt5.symbol_info_tick(simbolo).ask
+
+    #--------------------------caso compra----------------------------------
+    primero=datam30[-4][2]#le asigno el Low de la penultima impulso bajista
+    rompimiento=datam30[-2][2]#le asigno el low del impulso bajista
+    ultimoimpulso=datam30[-1][2]#low del impulso actual
+    if (rompimiento<primero and ultimoimpulso==rompimiento) or (rompimiento<primero and precio<rompimiento):
+        primero=datam1[-4][2]#le asigno el Low de la penultima impulso bajista
+        rompimiento=datam1[-2][2]#le asigno el low del impulso bajista
+        ultimoimpulso=datam1[-1][2]#low del impulso actual
+        for x in niveles:
+                if close>=x:
+                    cierreAfavor=1
+        if rompimiento<primero and ultimoimpulso==rompimiento and ((M1ant=='bajista') or (M1ant=='alcista' and M1antAnt=='bajista')) and cierreAfavor==1 and  M5He=="alcista":
+            print("compra M30: "+str(simbolo)+" : "+str(now))# 0 si es compra y 1 si es venta
+            precio=mt5.symbol_info_tick(simbolo).ask
+            sl=precio-rompimiento
+            tp=sl*2#--------------------------tp
+            lote=calculoRiesgo(sl,riesgo)
+            print(ordenar(0,lote,tp,sl,simbolo,comentario))
+            print(lote)  
+    #--------------------------caso compra----------------------------------
+
+    #--------------------------caso venta-----------------------------------
+    primero=data[-4][1]#le asigno el high de la penultima impulso alcista
+    rompimiento=data[-2][1]#le asigno el high del impulso alcista 
+    ultimoimpulso=data[-1][1]#high del impulso actual
+    if (rompimiento>primero and ultimoimpulso==rompimiento)  or (rompimiento>primero and precio>rompimiento):
+        primero=datam1[-4][1]#le asigno el high de la penultima impulso alcista
+        rompimiento=datam1[-2][1]#le asigno el high del impulso alcista 
+        ultimoimpulso=datam1[-1][1]#high del impulso actual
+        for x in niveles:
+                if close<=x:
+                    cierreAfavor=1
+        if rompimiento>primero and ultimoimpulso==rompimiento and ((M1ant=='alcista') or (M1ant=='bajista' and M1antAnt=='alcista')) and cierreAfavor==1  and M5He=="alcista":
+            print("venta M30: "+str(simbolo)+" : "+str(now))#1 si es venta y 0 si es compra 
+            precio=mt5.symbol_info_tick(simbolo).ask
+            sl=rompimiento-precio
+            tp=sl*2#--------------------------tp
+            lote=calculoRiesgo(sl,riesgo)
             lote=float(lote)
-            print(ordenar(1,lote,tp,sl,simbolo))               
+            print(ordenar(1,lote,tp,sl,simbolo,comentario))
+            print(lote)  
+    #--------------------------caso venta-----------------------------------
 
 #-------------------------------------Logica operaciones--------------------------------------------------    
+
+
+
 
 
 #-------------------------------------restricciones y toma de datos---------------------------------------
@@ -426,18 +564,8 @@ def inicio(riesgo):
             spread=spread[12]
             #if spread==100 or spread==10:
             if 1==1:
-                data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,200)))#toma de data [time,open,high,low,close...
-                data=joponesa(data)#Dataframe 
-                data=numpyAlist(data)#list[[open,high,low,close]]
-                data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
-                data=agrupacionVelas(data) #list[´alcista´,h,l,h,l,h,l]
-                data=estremosImpulsos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
-                data=data1dimecionA2dimenciones(data)#list[[´alcista´,h,l],['bajista',h,l]]
-                data=ajusteImpusos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
-                data=data1dimecionA2dimenciones(data)
-
                 '''
-                #-----------------operar una sola vez al dia-----------------------
+                #-----------------operar una sola vez al dia-----------------------sin actualizar
                 info=mt5.symbol_info(simbolo) 
                 now=(dt.utcfromtimestamp(info[10]))#hora exacta del simbolo
                 hoy = dt(now.year, now.month , now.day)
@@ -448,39 +576,99 @@ def inicio(riesgo):
                     simboloOperado.append(historial[e][15])
                     e=e+1
                 if  simbolo not in simboloOperado:#si no se han abiero operaciones en este simbolo pasa 
-                    logica(data,simbolo,riesgo)
-                #-----------------operar una sola vez al dia-----------------------
+                    logicaM15(data,simbolo,riesgo)
+                #-----------------operar una sola vez al dia-----------------------sin actualizar
                 ''' 
-
                 #-----------------Operar en todo momento---------------------------
                 posiciones=list(mt5.positions_get())
                 if len(posiciones)==0:
-                    logica(data,simbolo,riesgo)
+                    #logicaM15(simbolo,riesgo)
+                    logicaM30(simbolo,riesgo)
                 elif len(posiciones)>0:
-                    simboloPosiciones=[]
-                    for x in posiciones: 
-                        simboloPosiciones.append(x[16])
-                    if simbolo not in simboloPosiciones:
-                        logica(data,simbolo,riesgo)
+                    sistemasConOperacion=[]
+                    for x in posiciones:
+                        if x[17]=='M15':
+                            sistemasConOperacion.append('M15')
+                        elif x[17]=='M30':
+                            sistemasConOperacion.append('M30')
+                    if 'M15' in sistemasConOperacion and 'M30' in sistemasConOperacion:
+                        1
+                    elif 'M15' in sistemasConOperacion:
+                        logicaM30(simbolo,riesgo)
+                    elif 'M30' in sistemasConOperacion:
+                        1
+                        #logicaM15(simbolo,riesgo)   
                 #-----------------Operar en todo momento---------------------------
-                
-
             i=i+1
         time.sleep(1)
 #-------------------------------------restricciones y toma de datos---------------------------------------
 
 
+
+
+
+#-------------------------------------Creacion S1---------------------------------------------------------
+
+def S1():
+    global simbolos
+    contador=0
+    s1=[]
+    ohlc=[]
+    while 1:
+        tick = mt5.symbol_info_tick(simbolos[0])
+        #print("Bid:", tick.bid)
+        #print("Ask:", tick.ask)
+        if contador<=100:
+            s1.append(tick.bid)
+        if contador>100:
+            o=s1[0]
+            h=max(s1)
+            l=min(s1)
+            c=s1[0-1]
+            s1=[]
+            aux=[o,h,l,c]
+            ohlc.append(aux)
+            contador=0
+        contador=contador+1
+        #------------convertir S1 en impulsos------------------
+        '''
+        if len(ohlc)>2:
+            data=asignarTipo(ohlc)
+            data=agrupacionVelas(data) #list[´alcista´,h,l,h,l,h,l]
+            data=estremosImpulsos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+            data=data1dimecionA2dimenciones(data)#list[[´alcista´,h,l],['bajista',h,l]]
+            data=ajusteImpusos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+            print(data)
+        '''
+        #------------convertir S1 en impulsos------------------
+
+        time.sleep(0.01)     
+
+#-------------------------------------Creacion S1---------------------------------------------------------
+
+
+
+
+
 #-----------------------------------------varibles--------------------------------------------------------
-riesgo=1  #   1 = 1% de de la cuenta
+riesgo=0.025  #   1 = 1% de de la cuenta
 simbolos=['NAS100']
 #-----------------------------------------varibles--------------------------------------------------------
+
+
+
+
 
 #-----------------------------------------variblesCuenta--------------------------------------------------------
 cuenta=61126218
 contraseña="3anqbsZj"
 servidor="mt5-demo01.pepperstone.com"
 ruta="C:/Users/adjua/Desktop/Terminales/Terminal_Pruebas/terminal64.exe"#ruta terminal
-#-----------------------------------------varibles--------------------------------------------------------
+#-----------------------------------------variblesCuenta--------------------------------------------------------
+
+
+
+
 
 #---------------------------------------------------------------------------------------------------------
 autorizar=mt5.initialize(ruta,login=cuenta,Password=contraseña,server=servidor)
@@ -491,10 +679,16 @@ else:
     quit()
 #---------------------------------------------------------------------------------------------------------
 
+
+
+
+
 #------------------------------------------hilos----------------------------------------------------------
 hilo1 = threading.Thread(target=inicio,args=(riesgo,))#manera correcta de pasar parametros a un hilo, con ","
 hilo2 = threading.Thread(target=cuandoCerrar)
 hilo1.start()
 hilo2.start()
+hilo3 = threading.Thread(target=S1)
+#hilo3.start()
 #------------------------------------------hilos----------------------------------------------------------
 

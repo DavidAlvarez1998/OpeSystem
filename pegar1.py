@@ -15,11 +15,11 @@ rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta d
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
 
 '''
-mensaje="cuenta pegar1 reni: "
+mensaje="cuenta pegar1 Julian: "
 #---------------------------------------------DATOS PEGAR1--------------------------------------------
 
-cuenta=7147703
-contraseña="1IbCicPb"
+cuenta=7140257
+contraseña="p6ifHZXG"
 servidor="ICMarketsSC-MT5-2"
 rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/pegar1/terminal64.exe')#ruta terminal
 rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
@@ -215,6 +215,9 @@ def copiarOrden(rutaDatos):
                 sl=ope[3]
                 tp=ope[4]
                 tipo=ope[5]
+                #-------------------------------------------------COPIAR LA CUENTA DE NAS100 A USTEC-----------------------------------------------------
+                simbolo='USTEC'
+                #-------------------------------------------------COPIAR LA CUENTA DE NAS100 A USTEC-----------------------------------------------------
                 ordenar(simbolo,lote,sl,tp,tipo)
                 
                 operaciones=mt5.positions_get()
