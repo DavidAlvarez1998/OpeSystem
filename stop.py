@@ -1,5 +1,6 @@
+
 cuenta=10000
-riesgoPor=0.75
+riesgoPor=0.7
 
 riesgo=cuenta*riesgoPor/100
 print("cuenta: "+str(cuenta)+"\nriesgo: "+str(riesgoPor)+"%"+"  "+str(int(riesgo))+"$")

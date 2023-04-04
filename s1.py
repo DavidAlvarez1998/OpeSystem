@@ -20,6 +20,7 @@ mt5.initialize()
 
 
 
+
 def S1():
 
     while 1:
@@ -31,28 +32,30 @@ def S1():
         if m==0:
             break
 
-    contador=0# indica cada cuandos ciclos es un segundo, cada ciclo es un tick
     s1=[]# lista donde se agragan los valores de tick
     ohlc=[]# lista donde se cuardan los valores ohlc de cada segundo
     m1=[]# valores de ohlc del minuto respecto a los segundos calculados
+    aux=0
     while 1:
-        tick = mt5.symbol_info_tick(simbolo)
-        #--------------creacion de ohlc de cada segundo-----------------------
-        if contador<=10:
-            s1.append(tick.bid)
-        if contador>10:
-            o=s1[0]
-            h=max(s1)
-            l=min(s1)
-            c=s1[-1]
-            s1=[]
-            aux=[o,h,l,c]
-            ohlc.append(aux)
-            contador=0
-        contador=contador+1
-        #--------------creacion de ohlc de cada segundo-----------------------
         
-        
+        s = aux
+        while s==aux:
+            tick = mt5.symbol_info_tick(simbolo)
+            s1.append(tick.bid) 
+            info = mt5.symbol_info(simbolo)
+            now = dt.utcfromtimestamp(info[10])
+            s = now.second
+
+        o=s1[0]
+        h=max(s1)
+        l=min(s1)
+        c=s1[-1]
+        s1=[]
+        aux=[o,h,l,c]
+        ohlc.append(aux)
+        aux=s
+        print(len(ohlc))
+        #----------finalizar minuto
         if len(ohlc)==60:
             aux=[]
             for x in ohlc:
@@ -65,8 +68,10 @@ def S1():
             aux=[o,h,l,c]
             m1.append(aux)
             return m1
+        #----------finalizar minuto
         
-        print(len(ohlc))
-        time.sleep(0.1)  
+        #time.sleep(1/contador2)
 
+
+    
 print(S1())

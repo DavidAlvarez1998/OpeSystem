@@ -2,33 +2,32 @@ import os
 import MetaTrader5 as mt5
 import pickle as pi
 import time
+import threading
 
 
 
 
 '''
-cuenta=61126871
-contraseña="uj0xtfr3"
+mensaje="cuenta pruebas pegar: "
+cuenta=61144878
+contraseña="Pyqmpag3"
 servidor="mt5-demo01.pepperstone.com"
 rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/pegar1/terminal64.exe')#ruta terminal
 rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
-
 '''
-mensaje="cuenta pegar1 Julian: "
-#---------------------------------------------DATOS PEGAR1--------------------------------------------
 
-cuenta=7140257
-contraseña="p6ifHZXG"
-servidor="ICMarketsSC-MT5-2"
+
+#---------------------------------------------DATOS PEGAR1--------------------------------------------
+mensaje="cuenta pegar1 JOSE: "
+cuenta=300415148
+contraseña="etg8xf95j2"
+servidor="TradersGlobalGroup-Demo"
 rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/pegar1/terminal64.exe')#ruta terminal
 rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
 
 #-----------------------------------------------------------------------------------------------------
-
-
-
 if autorizar:
     print(mensaje+str(cuenta))
 else:
@@ -215,20 +214,14 @@ def copiarOrden(rutaDatos):
                 sl=ope[3]
                 tp=ope[4]
                 tipo=ope[5]
-                #-------------------------------------------------COPIAR LA CUENTA DE NAS100 A USTEC-----------------------------------------------------
-                simbolo='USTEC'
-                #-------------------------------------------------COPIAR LA CUENTA DE NAS100 A USTEC-----------------------------------------------------
-                ordenar(simbolo,lote,sl,tp,tipo)
-                
-                operaciones=mt5.positions_get()
-                operaciones=operaciones[-1]
+                operacion=ordenar(simbolo,lote,sl,tp,tipo) 
                 x.append(tikect)
-                x.append(operaciones[0])
-                x.append(operaciones[5])
-                x.append(operaciones[11])
-                x.append(operaciones[12])
-                x.append(operaciones[9])
-                x.append(operaciones[16])
+                x.append(operacion[2])  
+                x.append(operacion[10][10])
+                x.append(operacion[10][7])
+                x.append(operacion[10][8])
+                x.append(operacion[10][4])
+                x.append(operacion[10][3])
                 trades.append(x)
     
             if len(data)>0:

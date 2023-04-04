@@ -6,19 +6,18 @@ import os
 
 
 '''
-cuenta=61129885
-contraseña="qB0fnmv3"
+mensaje="cuenta pruebas copiar: "
+cuenta=61143461
+contraseña="xc7ynBa3"
 servidor="mt5-demo01.pepperstone.com"
 rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/copiar/terminal64.exe')#ruta terminal
 rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
-
 '''
-mensaje="cuenta copiar Noah: "
 #---------------------------------------------DATOS COPIAR--------------------------------------------
-
-cuenta=300371831
-contraseña="vmdmrufg34"
+mensaje="cuenta copiar JOSE: "
+cuenta=300411514
+contraseña="etg8xf95j2"
 servidor="TradersGlobalGroup-Demo"
 rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/copiar/terminal64.exe')#ruta terminal
 rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
