@@ -24,7 +24,7 @@ def repro():
 
 #-----------------------------------------reproducir Mp3-----------------------------------------------
 
-repro()
+
 
 
 #-----------------------------------------Procesado de velas--------------------------------------------
@@ -252,7 +252,7 @@ def M1anteriorAnterior(simbolo):
 
 #-------------------------------------Sistema y Operaciones ---------------------------------------------
 def ordenar(tipo,lote,tp,sl,simbolo,comentario):
-    #repro()
+    
     precio=mt5.symbol_info_tick(simbolo).ask
     deviation = 30
     if tipo==1:
@@ -665,17 +665,20 @@ def logicaM30(simbolo,riesgo):# sistema m30
 #-------------------------------------restricciones y toma de datos---------------------------------------
 def inicio(riesgo):
     global simbolos
-    z=0
+    
     while 1:
         i=0
         while i<len(simbolos):
             simbolo=simbolos[i]# cada uno de los simbolos es testeado
+            '''
+            #-------------------spread------------
             spread=(mt5.symbol_info(simbolo)) #data de instrumento
             spread=list(spread)
             spread=spread[12]
-            #if spread==100 or spread==10:
+            if spread==100 or spread==10:
+            #-------------------spread------------
+            '''
             if 1==1:
-
                 '''
                 #-----------------operar una sola vez al dia-----------------------sin actualizar
                 info=mt5.symbol_info(simbolo) 
@@ -690,7 +693,7 @@ def inicio(riesgo):
                 if  simbolo not in simboloOperado:#si no se han abiero operaciones en este simbolo pasa 
                     logicaM15(data,simbolo,riesgo)
                 #-----------------operar una sola vez al dia-----------------------sin actualizar
-                '''
+                
                 #-----------------Operar en todo momento---------------------------
                 posiciones=list(mt5.positions_get())
                 if len(posiciones)==0:
@@ -710,11 +713,23 @@ def inicio(riesgo):
                     elif 'M30' in sistemasConOperacion:
                         logicaM15(simbolo,riesgo)   
                 #-----------------Operar en todo momento---------------------------
-                 
+                '''
+                data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,5)))#toma de data [time,open,high,low,close...
+                print(data)
+                data=joponesa(data)#Dataframe 
                 
+                data=numpyAlist(data)#list[[open,high,low,close]]
+                data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
+                data=agrupacionVelas(data) #list[´alcista´,h,l,h,l,h,l]
+                data=estremosImpulsos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+                data=data1dimecionA2dimenciones(data)#list[[´alcista´,h,l],['bajista',h,l]]
+                data=ajusteImpusos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+                data=data1dimecionA2dimenciones(data)
+                
+
                 
             i=i+1
-        time.sleep(10)
+        time.sleep(1.1)
 #-------------------------------------restricciones y toma de datos---------------------------------------
 
 
@@ -765,7 +780,8 @@ def S1():
 
 #-----------------------------------------varibles--------------------------------------------------------
 riesgo=0.25  #   1 = 1% de de la cuenta
-simbolos=['NAS100','US30']
+simbolos=['NAS100']
+#simbolos=['NAS100','US30']
 #-----------------------------------------varibles--------------------------------------------------------
 
 
