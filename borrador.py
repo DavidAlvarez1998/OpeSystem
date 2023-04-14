@@ -4,8 +4,25 @@ import numpy as np
 import time 
 import threading
 from datetime import datetime as dt
+import pygame
 import os
 
+
+
+#-----------------------------------------reproducir Mp3-----------------------------------------------
+
+def repro():
+    archivo=os.path.join(os.path.dirname(os.path.abspath(__file__)),'song.mp3')#ruta data
+    archivo=open(archivo,"r")
+    pygame.mixer.init()
+    sonido = pygame.mixer.Sound(archivo)
+    pygame.mixer.Sound.play(sonido)
+    time.sleep(1)
+    pygame.mixer.Sound.stop(sonido)
+    time.sleep(1)
+    archivo.close()
+
+#-----------------------------------------reproducir Mp3-----------------------------------------------
 
 
 
@@ -224,6 +241,7 @@ def M1(simbolo):
     data=numpyAlist(data)#list[[open,high,low,close]]
     close=data[-2][4]#valor de cierre ultima vela cerrada
     data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
+    print(data)
     tipo=data[-7]#tipo de vela ( vela cerrada)
     return tipo,close
 
@@ -545,31 +563,10 @@ def identificarRompimientoM30(simbolo):# retorna texto compras o ventas si asi l
 
     return(r)
 
-def confirmarEntrada(t):#retorna 0 si ya hay una orden es ese punto o 1 si no la hay
-    posiciones=list(mt5.positions_get())
-    t=str(t)
-    for e in posiciones:
-        n=e[17]
-        n=n.split(",")             
-        if n[0]=='V':#si hay orden con sistema vectores
-            x=n[1]
-            if t==x:
-                return 0#ya hay una orden en este punto y con este sistema
-        elif n[0]=='M15':
-            x=n[1]
-            if t==x:
-                return 0
-        elif n[0]=='M30':
-            x=n[1]
-            if t==x:
-                return 0
-    return 1#no hay ordenes en este punto
-
 def logicaM15(simbolo,riesgo):# sistema m15
     comentario="M15"
-    t=mt5.symbol_info(simbolo)#now
-    t=t[10]
-    t=(t // 60) * 60
+    now=(mt5.symbol_info(simbolo)) #data de instrumento
+    now=(dt.utcfromtimestamp(now[10]))#16:30 es la apertura (9:30)
     data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,200)))#toma de data [time,open,high,low,close...
     data=joponesa(data)#Dataframe 
     data=numpyAlist(data)
@@ -587,7 +584,7 @@ def logicaM15(simbolo,riesgo):# sistema m15
     #el ultimo impulso es varible segun la direccion de la ultima vela no cerrada con respecto a la anterior a ella
     niveles=niveles14(data)#lista de los niveles 1/4 del ultimo impulso
     cierreAfavor=0 # variable para determinar si se cerro a favor de la dioreccion con respecto a 1/4
-    if m15=='alcista' and m1=='alcista' and confirmarEntrada(t)==1:
+    if m15=='alcista' and m1=='alcista':
         primero=data[-4][4]#le asigno el Low de la penultima impulso bajista
         rompimiento=data[-2][4]#le asigno el low del impulso bajista
         ultimoimpulso=data[-1][4]#low del impulso actual
@@ -595,16 +592,15 @@ def logicaM15(simbolo,riesgo):# sistema m15
                 if close>=x:
                     cierreAfavor=1
         if rompimiento<primero and ultimoimpulso==rompimiento and ((M1ant=='bajista') or (M1ant=='alcista' and M1antAnt=='bajista')) and cierreAfavor==1:
+            print("compra M15: "+str(simbolo)+" : "+str(now))# 0 si es compra y 1 si es venta
             precio=mt5.symbol_info_tick(simbolo).ask
             sl=precio-rompimiento
             tp=sl*2#--------------------------tp
             lote=calculoRiesgo(sl,riesgo)
-            comentario=comentario+','+str(t)
-            print('compra: '+comentario)
             (ordenar(0,lote,tp,sl,simbolo,comentario))
-              
+            print(lote)  
 
-    elif m15=='bajista' and m1=='bajista' and confirmarEntrada(t)==1:
+    elif m15=='bajista' and m1=='bajista':
         primero=data[-4][2]#le asigno el high de la penultima impulso alcista
         rompimiento=data[-2][2]#le asigno el high del impulso alcista 
         ultimoimpulso=data[-1][2]#high del impulso actual
@@ -612,19 +608,18 @@ def logicaM15(simbolo,riesgo):# sistema m15
                 if close<=x:
                     cierreAfavor=1
         if rompimiento>primero and ultimoimpulso==rompimiento and ((M1ant=='alcista') or (M1ant=='bajista' and M1antAnt=='alcista')) and cierreAfavor==1:
+            print("venta M15: "+str(simbolo)+" : "+str(now))#1 si es venta y 0 si es compra 
             precio=mt5.symbol_info_tick(simbolo).ask
             sl=rompimiento-precio
             tp=sl*2#--------------------------tp
             lote=calculoRiesgo(sl,riesgo)
-            comentario=comentario+','+str(t)
-            print('compra: '+comentario)
-            (ordenar(1,lote,tp,sl,simbolo,comentario))                     
+            (ordenar(1,lote,tp,sl,simbolo,comentario))
+            print(lote)             
 
 def logicaM30(simbolo,riesgo):# sistema m30 
     comentario="M30"
-    t=mt5.symbol_info(simbolo)#now
-    t=t[10]
-    t=(t // 60) * 60
+    now=(mt5.symbol_info(simbolo)) #data de instrumento
+    now=(dt.utcfromtimestamp(now[10]))#16:30 es la apertura (9:30)
     data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,100)))#toma de data [time,open,high,low,close...
     data=joponesa(data)#Dataframe 
     data=numpyAlist(data)
@@ -635,14 +630,17 @@ def logicaM30(simbolo,riesgo):# sistema m30
     data=ajusteImpusos(data)
     m1,close=M1(simbolo)
     M5He=M5Heikin(simbolo)
+    
     M1ant=M1anterior(simbolo)
     M1antAnt=M1anteriorAnterior(simbolo)
     cierreAfavor=0
     niveles=niveles14(data)#lista de los niveles 1/4 del ultimo impulso
     precio=mt5.symbol_info_tick(simbolo).ask
 
-    #--------------------------caso compra----------------------------------    
-    if identificarRompimientoM30(simbolo)=='compras' and m1=='alcista' and confirmarEntrada(t)==1:
+    #--------------------------caso compra----------------------------------
+    
+    
+    if identificarRompimientoM30(simbolo)=='compras' and m1=='alcista':
         primero=data[-4][4]#le asigno el Low del penultima impulso 
         rompimiento=data[-2][4]#le asigno el low del impulso 
         ultimoimpulso=data[-1][4]#low del impulso actual
@@ -651,17 +649,18 @@ def logicaM30(simbolo,riesgo):# sistema m30
                     cierreAfavor=1
         if rompimiento<primero and ultimoimpulso==rompimiento and ((M1ant=='bajista') or (M1ant=='alcista' and M1antAnt=='bajista')) and cierreAfavor==1 and  M5He=="alcista":
         #if rompimiento<primero and ultimoimpulso==rompimiento and (M1ant=='bajista') and cierreAfavor==1 and  M5He=="alcista":            
+            print("compra M30: "+str(simbolo)+" : "+str(now))# 0 si es compra y 1 si es venta
             precio=mt5.symbol_info_tick(simbolo).ask
             sl=precio-rompimiento
             tp=sl*2#--------------------------tp
             lote=calculoRiesgo(sl,riesgo)
-            comentario=comentario+','+str(t)
-            print('compra: '+comentario)
             (ordenar(0,lote,tp,sl,simbolo,comentario))
             print(lote)
+
     #--------------------------caso compra----------------------------------
+
     #--------------------------caso venta-----------------------------------
-    if identificarRompimientoM30(simbolo)=='ventas' and m1 =='bajista' and confirmarEntrada(t)==1:
+    if identificarRompimientoM30(simbolo)=='ventas' and m1 =='bajista':
         primero=data[-4][2]#le asigno el high de la penultima impulso 
         rompimiento=data[-2][2]#le asigno el high del impulso  
         ultimoimpulso=data[-1][2]#high del impulso actual
@@ -669,19 +668,19 @@ def logicaM30(simbolo,riesgo):# sistema m30
                 if close<=x:
                     cierreAfavor=1
         if rompimiento>primero and ultimoimpulso==rompimiento and ((M1ant=='alcista') or (M1ant=='bajista' and M1antAnt=='alcista')) and cierreAfavor==1  and M5He=="bajista":
-        #if rompimiento>primero and ultimoimpulso==rompimiento and (M1ant=='alcista') and cierreAfavor==1  and M5He=="bajista":             
+        #if rompimiento>primero and ultimoimpulso==rompimiento and (M1ant=='alcista') and cierreAfavor==1  and M5He=="bajista":            
+            print("venta M30: "+str(simbolo)+" : "+str(now))#1 si es venta y 0 si es compra 
             precio=mt5.symbol_info_tick(simbolo).ask
             sl=rompimiento-precio
             tp=sl*2#--------------------------tp
             lote=calculoRiesgo(sl,riesgo)
-            comentario=comentario+','+str(t)
-            print('compra: '+comentario)
             (ordenar(1,lote,tp,sl,simbolo,comentario))
+            print(lote)
+            
     #--------------------------caso venta-----------------------------------
 
 def logicaVectores(simbolo,riesgo):
-    
-    comentario='V'
+    comentario='VECTORES'
     data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,300)))#toma de data [time,open,high,low,close...
     data=joponesa(data)#Dataframe 
     data=numpyAlist(data)
@@ -693,92 +692,73 @@ def logicaVectores(simbolo,riesgo):
     precio=mt5.symbol_info_tick(simbolo).ask
     mv=mediaMovilM1(simbolo)
     m1,close=M1(simbolo)
-    lista_invertida = data[::-1]#data al reves
+    print(M1anteriorAnterior(simbolo))
     #------------------------------caso compras-----------------------------------------
+    ultimoThigh=data[-2][1]
+    ultimoHigh=data[-2][2]
+    siguienteThigh=0
+    siguienteHigh=0
+    i=3
+    while i<len(data):
+        siguienteHigh=data[-i][2]
+        if siguienteHigh>ultimoHigh:
+            siguienteThigh=data[-i][1]
+            break
+        i=i+1
+    x1=ultimoThigh
+    y1=ultimoHigh
+    x2=siguienteThigh
+    y2=siguienteHigh
+    x=mt5.symbol_info(simbolo)#now
+    x=x[10]
+    m=(y2-y1)/(x2-x1)
+    b=y2-m*x2
+    y=m*x+b
+    #print(dt.utcfromtimestamp(x1),y1,dt.utcfromtimestamp(x2),y2)
+    #print(y)
+    
     if m1=='alcista':
-        ultimoThigh=data[-2][1]
-        ultimoHigh=data[-2][2]
-        siguienteThigh=0
-        siguienteHigh=0
-        i=3
-        while i<len(lista_invertida):
-            siguienteHigh=lista_invertida[i][2]
-            if siguienteHigh>ultimoHigh:
-                siguienteThigh=lista_invertida[i][1]
-                break
-            i=i+1
-        if siguienteThigh!=0:#restringimos el caso en que no encuentre un estremo anterior 
-            x1=ultimoThigh
-            y1=ultimoHigh
-            x2=siguienteThigh
-            y2=siguienteHigh
-            x=mt5.symbol_info(simbolo)#now
-            x=x[10]
-            m=(y2-y1)/(x2-x1)
-            b=y2-m*x2
-            y=m*x+b
-            #print(dt.utcfromtimestamp(x1),y1,dt.utcfromtimestamp(x2),y2)
-            #print('compras: '+str(y))
-            i=2
-            while i<len(lista_invertida):#donde poner stop (estremo siguiente con respecto al precio actual)
-                ultimoLow=data[i][4]
-                if ultimoLow<precio:
-                    break
-                i=i+1
-            sl=precio-ultimoLow
-            tp=sl*2
-            print('sl Compras: '+str(ultimoLow))
-            lote=calculoRiesgo(sl,riesgo)
-            t=(ultimoThigh // 60) * 60# eliminamos los segundos 
-            if close>mv and close>y and confirmarEntrada(t)==1:
-                comentario=comentario+','+str(t)
-                print('compra: '+comentario)
-                (ordenar(0,lote,tp,sl,simbolo,comentario))         
-    #------------------------------caso compras-----------------------------------------
-    
-    #------------------------------caso ventas-----------------------------------------   
-    if m1=='bajista':
-        ultimoTlow=data[-2][3]
         ultimoLow=data[-2][4]
-        siguienteTlow=0
-        siguienteLow=0
-        i=3
-        while i<len(lista_invertida):
-            siguienteLow=lista_invertida[i][4]
-            if siguienteLow<ultimoLow:
-                siguienteTlow=lista_invertida[i][3]
-                break
-            i=i+1
-        if siguienteTlow!=0:
-            x1=ultimoTlow
-            y1=ultimoLow
-            x2=siguienteTlow
-            y2=siguienteLow
-            x=mt5.symbol_info(simbolo)#now
-            x=x[10]
-            m=(y2-y1)/(x2-x1)
-            b=y2-m*x2
-            y=m*x+b
-            #print(dt.utcfromtimestamp(x1),y1,dt.utcfromtimestamp(x2),y2)
-            #print('ventas: '+str(y))
-            i=2
-            while i<len(lista_invertida):
-                ultimoHigh=data[i][2] 
-                if ultimoHigh>precio:
-                    break
-                i=i+1
-            sl=ultimoHigh-precio
-            tp=sl*2
-            print('sl Venta: '+str(ultimoHigh))
-            lote=calculoRiesgo(sl,riesgo)
-            t=(ultimoTlow // 60) * 60
-            if close<mv and close<y and  confirmarEntrada(t)==1:
-                comentario=comentario+','+str(t)
-                print('venta: '+comentario)
-                (ordenar(1,lote,tp,sl,simbolo,comentario))
+        sl=precio-ultimoLow
+        tp=sl*2
+        lote=calculoRiesgo(sl,riesgo)
+        print('entro')
+        if close>mv and close>y:
+            #print(ordenar(0,lote,tp,sl,simbolo,comentario+str(x,y)))
+            print(ordenar(0,lote,tp,sl,simbolo,comentario))
+    #------------------------------caso compras-----------------------------------------
     #------------------------------caso ventas-----------------------------------------
-   
-    
+    ultimoTlow=data[-2][3]
+    ultimoLow=data[-2][4]
+    siguienteTlow=0
+    siguienteLow=0
+    i=3
+    while i<len(data):
+        siguienteLow=data[-i][4]
+        if siguienteLow<ultimoLow:
+            siguienteTlow=data[-i][3]
+            break
+        i=i+1
+    x1=ultimoTlow
+    y1=ultimoLow
+    x2=siguienteTlow
+    y2=siguienteLow
+    x=mt5.symbol_info(simbolo)#now
+    x=x[10]
+    m=(y2-y1)/(x2-x1)
+    b=y2-m*x2
+    y=m*x+b
+    #print(dt.utcfromtimestamp(x1),y1,dt.utcfromtimestamp(x2),y2)
+    #print(y)
+    if m1=='bajista':
+        ultimoHigh=data[-2][2] 
+        sl=ultimoHigh-precio
+        tp=sl*2
+        lote=calculoRiesgo(sl,riesgo)
+        if close<mv and close<y:
+            #print(ordenar(1,lote,tp,sl,simbolo,comentario+str(x,y)))
+            print(ordenar(1,lote,tp,sl,simbolo,comentario))
+    #------------------------------caso ventas-----------------------------------------
 #-------------------------------------Logica operaciones--------------------------------------------------    
 
 
@@ -788,15 +768,37 @@ def logicaVectores(simbolo,riesgo):
 #-------------------------------------restricciones y toma de datos---------------------------------------
 def inicio(riesgo):
     global simbolos
+    
     while 1:
         i=0
         while i<len(simbolos):
             simbolo=simbolos[i]# cada uno de los simbolos es testeado
+            
             #logicaM15(simbolo,riesgo)
             #logicaM30(simbolo,riesgo)
-            logicaVectores(simbolo,riesgo)
+            #logicaVectores(simbolo,riesgo)
+            tipo=0
+            lote=0.1
+            tp=30
+            sl=30
+            comentario='V'
+            x=mt5.symbol_info(simbolo)#now
+            x=x[10]
+            x=(x // 60) * 60
+            y=mt5.symbol_info_tick(simbolo).ask
+            comentario=comentario+','+str(x)
+            print(comentario)
+            ordenar(tipo,lote,tp,sl,simbolo,comentario)
+            posiciones=list(mt5.positions_get())
+               
+            for e in posiciones:
+                n=e[17]
+                n=n.split(",")
+                print(n)
+            
+                
             i=i+1
-        time.sleep(0.1)
+        time.sleep(60)
 #-------------------------------------restricciones y toma de datos---------------------------------------
 
 
@@ -848,6 +850,7 @@ def S1():
 #-----------------------------------------varibles--------------------------------------------------------
 riesgo=0.25  #   1 = 1% de de la cuenta
 simbolos=['NAS100']
+#simbolos=['NAS100','US30']
 #-----------------------------------------varibles--------------------------------------------------------
 
 

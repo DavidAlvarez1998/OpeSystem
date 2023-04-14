@@ -395,7 +395,7 @@ def calculoRiesgo(pips,riesgo):# para el nas100
 
 #-------------------------------------Sistema BE ---------------------------------------------------------
 def modificarOrdenBe(simbolo,ticket,tipo,tp,preciOrden):# pone en libre de riesgo las ordenes al ir 1 a 1 
-    puntosBreakeven=2
+    puntosBreakeven=3
     if tipo==0:
         request = {
         "action": mt5.TRADE_ACTION_SLTP,
@@ -487,31 +487,23 @@ def identificarRompimientoM30(simbolo):# retorna texto compras o ventas si asi l
     data=ajusteImpusos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
     data=data1dimecionA2dimenciones(data)
     precioBid=mt5.symbol_info_tick(simbolo).bid
-
     cuartolow=data[-4][2]
     tercerolow=data[-3][2]
     segundolow=data[-2][2]
     primerolow=data[-1][2]
-
     cuartohigh=data[-4][1]
     tercerohig=data[-3][1]
     segundohig=data[-2][1]
     primerohig=data[-1][1]
-
     r=''
-
     if precioBid < segundolow:
         r='compras'
-        
     elif precioBid > segundohig:
-        r='ventas'
-        
+        r='ventas'   
     elif segundolow<cuartolow:
         r='compras'
-
     elif segundohig>cuartohigh:
-        r='ventas'
-        
+        r='ventas' 
     elif r=='':
         i=len(data)-1
         while i<=len(data)+3:
@@ -524,17 +516,13 @@ def identificarRompimientoM30(simbolo):# retorna texto compras o ventas si asi l
             tercerohig=data[i-2][1]
             segundohig=data[i-1][1]
             primerohig=data[i][1]
-
             if segundolow<cuartolow:
-                r='compras'
-                
+                r='compras'    
                 break
             elif segundohig>cuartohigh:
                 r='ventas'
-                
                 break
             i=i-1
-
     return(r)
 
 def logicaM15(simbolo,riesgo):# sistema m15
@@ -606,7 +594,6 @@ def logicaM30(simbolo,riesgo):# sistema m30
     data=data1dimecionA2dimenciones(data)
     m1,close=M1(simbolo)
     M5He=M5Heikin(simbolo)
-    
     M1ant=M1anterior(simbolo)
     M1antAnt=M1anteriorAnterior(simbolo)
     cierreAfavor=0
@@ -665,7 +652,6 @@ def logicaM30(simbolo,riesgo):# sistema m30
 #-------------------------------------restricciones y toma de datos---------------------------------------
 def inicio(riesgo):
     global simbolos
-    
     while 1:
         i=0
         while i<len(simbolos):
@@ -712,14 +698,9 @@ def inicio(riesgo):
                         logicaM30(simbolo,riesgo)
                     elif 'M30' in sistemasConOperacion:
                         logicaM15(simbolo,riesgo)   
-                #-----------------Operar en todo momento---------------------------
-                
-             
-                
-
-                
+                #-----------------Operar en todo momento---------------------------     
             i=i+1
-        time.sleep(1.1)
+        time.sleep(1)
 #-------------------------------------restricciones y toma de datos---------------------------------------
 
 
@@ -732,7 +713,6 @@ def S1():
     contador=0
     s1=[]
     ohlc=[]
-    
     while 1:
         tick = mt5.symbol_info_tick(simbolos[0])
         #print("Bid:", tick.bid)
@@ -760,7 +740,6 @@ def S1():
             print(data)
         '''
         #------------convertir S1 en impulsos------------------
-
         time.sleep(0.01)     
 #-------------------------------------Creacion S1---------------------------------------------------------
 
@@ -784,10 +763,6 @@ contraseña="xc7ynBa3"
 servidor="mt5-demo01.pepperstone.com"
 ruta="C:/Users/adjua/Desktop/Terminales/Terminal_Pruebas/terminal64.exe"#ruta terminal
 #-----------------------------------------variblesCuenta--------------------------------------------------------
-
-
-
-
 
 #---------------------------------------------------------------------------------------------------------
 autorizar=mt5.initialize(ruta,login=cuenta,Password=contraseña,server=servidor)
