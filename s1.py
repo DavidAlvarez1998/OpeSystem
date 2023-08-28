@@ -4,10 +4,69 @@ from datetime import datetime as dt
 import time
 import threading
 
-info=0
-simbolo='NAS100'
+
+
+cuenta=61160245
+contraseña="mgI3ncev"
+servidor="mt5-demo01.pepperstone.com"
+
+
+
+cuenta=82117703
+contraseña="bqkkeprcu4"
+servidor="EightcapEU-Live"
+
+cuenta=82117069 
+contraseña="bqkkeprcu4"
+servidor="EightcapEU-Live"
+autorizar=mt5.initialize(login=cuenta,Password=contraseña,server=servidor)
+
+#-----------------------------------------------------------------------------------------------------
+mensaje='xxx: '
+if autorizar:
+    balance=mt5.account_info() #tamaño de la cuenta actual
+    balance=balance[13]         #tamaño de la cuenta actual
+    print(mensaje+'\ncuenta: '+str(cuenta)+'\nbalance: '+str(balance))
+else:
+    print("error el terminal", mt5.last_error())
+    quit()
+
 mt5.initialize()
 
+'''
+while 1:
+    operaciones=mt5.positions_get()
+    print(operaciones)
+    time.sleep(1)
+'''
+simbolo='NDX100'
+lote=0.01
+sl=0.0
+tp=0.0
+tipo=1
+def ordenar(simbolo,lote,sl,tp,tipo):#monta orden en el mercado
+    precio=mt5.symbol_info_tick(simbolo).ask
+    deviation = 30
+    if tipo==1:
+        request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": simbolo,
+            "volume": lote,
+            "type": tipo,
+            "price": precio,
+            "sl": sl,
+            "tp": tp,
+            "deviation": int(deviation),
+            "magic": int(235000),
+            "comment": "python script open",
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_IOC,
+        }
+        # send a trading request
+        result = mt5.order_send(request)
+        # check the execution result 
+        return result
+print(ordenar(simbolo,lote,sl,tp,tipo))
 #info=mt5.symbols_total() #numero de instrumentos finacieros
 #info=mt5.symbols_get() #data de todos instrumentos finacieros 
 #info=(mt5.symbol_info(simbolo)) #data de instrumento
@@ -18,7 +77,7 @@ mt5.initialize()
 #print("Bid:", tick.bid)
 #print("Ask:", tick.ask)
 
-
+#print(info)
 
 
 def S1():
@@ -71,7 +130,3 @@ def S1():
         #----------finalizar minuto
         
         #time.sleep(1/contador2)
-
-
-    
-print(S1())

@@ -608,7 +608,7 @@ def logicaM15(simbolo,riesgo):# sistema m15
                 if close<=x:
                     cierreAfavor=1
         if rompimiento>primero and ultimoimpulso==rompimiento and ((M1ant=='alcista') or (M1ant=='bajista' and M1antAnt=='alcista')) and cierreAfavor==1:
-            print("venta M15: "+str(simbolo)+" : "+str(now))#1 si es venta y 0 si es compra 
+            print("venta M15: "+str(simbolo)+" : "+str(now))#0 si es compra y 1 si es venta
             precio=mt5.symbol_info_tick(simbolo).ask
             sl=rompimiento-precio
             tp=sl*2#--------------------------tp
@@ -787,61 +787,18 @@ def inicio(riesgo):
             x=(x // 60) * 60
             y=mt5.symbol_info_tick(simbolo).ask
             comentario=comentario+','+str(x)
-            print(comentario)
+
             ordenar(tipo,lote,tp,sl,simbolo,comentario)
             posiciones=list(mt5.positions_get())
+            print(len(posiciones))
                
-            for e in posiciones:
-                n=e[17]
-                n=n.split(",")
-                print(n)
+
             
                 
             i=i+1
-        time.sleep(60)
+        time.sleep(0.2)
 #-------------------------------------restricciones y toma de datos---------------------------------------
 
-
-
-
-
-#-------------------------------------Creacion S1---------------------------------------------------------
-def S1():
-    global simbolos
-    contador=0
-    s1=[]
-    ohlc=[]
-    
-    while 1:
-        tick = mt5.symbol_info_tick(simbolos[0])
-        #print("Bid:", tick.bid)
-        #print("Ask:", tick.ask)
-        if contador<=100:
-            s1.append(tick.bid)
-        if contador>100:
-            o=s1[0]
-            h=max(s1)
-            l=min(s1)
-            c=s1[0-1]
-            s1=[]
-            aux=[o,h,l,c]
-            ohlc.append(aux)
-            contador=0
-        contador=contador+1
-        #------------convertir S1 en impulsos------------------
-        '''
-        if len(ohlc)>2:
-            data=asignarTipo(ohlc)
-            data=agrupacionVelas(data) #list[´alcista´,h,l,h,l,h,l]
-            data=estremosImpulsos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
-            data=data1dimecionA2dimenciones(data)#list[[´alcista´,h,l],['bajista',h,l]]
-            data=ajusteImpusos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
-            print(data)
-        '''
-        #------------convertir S1 en impulsos------------------
-
-        time.sleep(0.01)     
-#-------------------------------------Creacion S1---------------------------------------------------------
 
 
 
@@ -858,8 +815,8 @@ simbolos=['NAS100']
 
 
 #-----------------------------------------variblesCuenta--------------------------------------------------------
-cuenta=61143461
-contraseña="xc7ynBa3"
+cuenta=61161211
+contraseña="Or5ynex3"
 servidor="mt5-demo01.pepperstone.com"
 ruta="C:/Users/adjua/Desktop/Terminales/Terminal_Pruebas/terminal64.exe"#ruta terminal
 #-----------------------------------------variblesCuenta--------------------------------------------------------

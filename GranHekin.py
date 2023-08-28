@@ -4,7 +4,49 @@ import numpy as np
 import time 
 import threading
 from datetime import datetime as dt
-import os
+
+
+
+
+
+
+#-------------------------------------Creacion S1---------------------------------------------------------
+def S1():
+    global simbolos
+    contador=0
+    s1=[]
+    ohlc=[]
+    
+    while 1:
+        tick = mt5.symbol_info_tick(simbolos[0])
+        #print("Bid:", tick.bid)
+        #print("Ask:", tick.ask)
+        if contador<=100:
+            s1.append(tick.bid)
+        if contador>100:
+            o=s1[0]
+            h=max(s1)
+            l=min(s1)
+            c=s1[0-1]
+            s1=[]
+            aux=[o,h,l,c]
+            ohlc.append(aux)
+            contador=0
+        contador=contador+1
+        #------------convertir S1 en impulsos------------------
+        '''
+        if len(ohlc)>2:
+            data=asignarTipo(ohlc)
+            data=agrupacionVelas(data) #list[´alcista´,h,l,h,l,h,l]
+            data=estremosImpulsos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+            data=data1dimecionA2dimenciones(data)#list[[´alcista´,h,l],['bajista',h,l]]
+            data=ajusteImpusos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
+            print(data)
+        '''
+        #------------convertir S1 en impulsos------------------
+
+        time.sleep(0.01)     
+#-------------------------------------Creacion S1---------------------------------------------------------
 
 
 
@@ -223,6 +265,16 @@ def M1(simbolo):
     tipo=data[-7]#tipo de vela ( vela cerrada)
     return tipo,close
 
+#retorna el ultimo tipo de vela cerrada en M5 y su valor de close
+def M5(simbolo):
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M5,0,10)))
+    data=joponesa(data)#Dataframe 
+    data=numpyAlist(data)#list[[open,high,low,close]]
+    close=data[-2][4]#valor de cierre ultima vela cerrada
+    data=asignarTipo(data)#list['alcista,h,l,'alcista',h,l]
+    tipo=data[-7]#tipo de vela ( vela cerrada)
+    return tipo,close
+
 #retorna el ultimo tipo de vela cerrada en M15 y su valor de close
 def M15(simbolo):
     data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M15,0,10)))
@@ -258,7 +310,6 @@ def M1anteriorAnterior(simbolo):
 
 #-------------------------------------Sistema y Operaciones ---------------------------------------------
 def ordenar(tipo,lote,tp,sl,simbolo,comentario):
-    
     precio=mt5.symbol_info_tick(simbolo).ask
     deviation = 30
     if tipo==1:
@@ -496,7 +547,8 @@ def mediaMovilM15(simbolo):
 
 
 #-------------------------------------Logica operaciones--------------------------------------------------
-def niveles14(data):#retorna lista con niveles 1/4 del ultimo impulso
+# retorna lista con niveles 1/4 del ultimo impulso
+def niveles14(data):
     impulsoAnt=data[-2]
     highAnt=impulsoAnt[2]#maximo del ultimo impulso finalizado
     lowAnt=impulsoAnt[4]#minimo del ultimo impulso finalizado
@@ -517,7 +569,8 @@ def niveles14(data):#retorna lista con niveles 1/4 del ultimo impulso
         lowAnt=lowAnt+1
     return nivelesImpulso
 
-def identificarRompimientoM30(simbolo):# retorna texto compras o ventas si asi lo dice el sistema de m30 en m30
+# retorna texto compras o ventas si asi lo dice el sistema de m30 en m30
+def identificarRompimientoM30(simbolo):
     data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M30,0,50)))#toma de data [time,open,high,low,close...
     data=joponesa(data)#Dataframe 
     data=numpyAlist(data)
@@ -577,7 +630,8 @@ def identificarRompimientoM30(simbolo):# retorna texto compras o ventas si asi l
 
     return(r)
 
-def confirmarEntrada(t,simbolo):#retorna 0 si ya se tomo una orden en ese mento y 1 si no 
+#retorna 0 si ya se tomo una orden en ese mento y 1 si no
+def confirmarEntrada(t,simbolo):
     #posiciones=list(mt5.positions_get())
     info=mt5.symbol_info(simbolo) 
     now=(dt.utcfromtimestamp(info[10]))#hora exacta del simbolo
@@ -601,12 +655,153 @@ def confirmarEntrada(t,simbolo):#retorna 0 si ya se tomo una orden en ese mento 
                 return 0
     return 1#no hay ordenes en este punto
 
-def logicaM15(simbolo,riesgo):# sistema m15
+# exclucivo para sistema ARMONIA VECTORES
+def ConfirmarArmoniaVectoresM15(simbolo):
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M15,0,100)))#toma de data [time,open,high,low,close...
+    data=joponesa(data)#Dataframe 
+    data=numpyAlist(data)
+    data=asignarTipo(data)
+    data=agrupacionVelas(data) 
+    data=data1dimecionA2dimenciones(data)
+    data=estremosImpulsos(data)
+    data=ajusteImpusos(data)
+    mv=mediaMovilM5(simbolo)
+    m15,closeM15=M15(simbolo)
+    lista_invertida = data[::-1]#data al reves [['alcista',tH,H,tL,l],[]...]
+    #------------------------------caso compras-----------------------------------------
+    ultimoThigh=data[-2][1]
+    ultimoHigh=data[-2][2]
+    siguienteThigh=0
+    siguienteHigh=0
+    i=3
+    while i<len(lista_invertida):
+        siguienteHigh=lista_invertida[i][2]
+        if siguienteHigh>ultimoHigh:
+            siguienteThigh=lista_invertida[i][1]
+            break
+        i=i+1
+    if siguienteThigh!=0:#restringimos el caso en que no encuentre un estremo anterior 
+        x1=ultimoThigh
+        y1=ultimoHigh
+        x2=siguienteThigh
+        y2=siguienteHigh
+        x=mt5.symbol_info(simbolo)#now
+        x=x[10]
+        m=(y2-y1)/(x2-x1)
+        b=y2-m*x2
+        y=m*x+b
+        #print(dt.utcfromtimestamp(x1),dt.utcfromtimestamp(x2))
+        #print('compras: '+str(y))
+        #if closeM5>mv and closeM5>y:
+        if closeM15>y:
+            return 'compras'    
+    #------------------------------caso compras-----------------------------------------
+    
+    #------------------------------caso ventas-----------------------------------------   
+    ultimoTlow=data[-2][3]
+    ultimoLow=data[-2][4]
+    siguienteTlow=0
+    siguienteLow=0
+    i=3
+    while i<len(lista_invertida):
+        siguienteLow=lista_invertida[i][4]
+        if siguienteLow<ultimoLow:
+            siguienteTlow=lista_invertida[i][3]
+            break
+        i=i+1
+    if siguienteTlow!=0:
+        x1=ultimoTlow
+        y1=ultimoLow
+        x2=siguienteTlow
+        y2=siguienteLow
+        x=mt5.symbol_info(simbolo)#now
+        x=x[10]
+        m=(y2-y1)/(x2-x1)
+        b=y2-m*x2
+        y=m*x+b
+        #print(dt.utcfromtimestamp(x1),dt.utcfromtimestamp(x2))
+        #print('ventas: '+str(y))
+        #if closeM5<mv and closeM5<y:
+        if closeM15<y:
+            return 'ventas'      
+    return 0
+    #------------------------------caso ventas-----------------------------------------  
+
+# exclucivo para sistema ARMONIA VECTORES
+def ConfirmarArmoniaVectoresM5(simbolo):
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M5,0,100)))#toma de data [time,open,high,low,close...
+    data=joponesa(data)#Dataframe 
+    data=numpyAlist(data)
+    data=asignarTipo(data)
+    data=agrupacionVelas(data) 
+    data=data1dimecionA2dimenciones(data)
+    data=estremosImpulsos(data)
+    data=ajusteImpusos(data)
+    mv=mediaMovilM5(simbolo)
+    m5,closeM5=M5(simbolo)
+    lista_invertida = data[::-1]#data al reves
+    #------------------------------caso compras-----------------------------------------
+    ultimoThigh=data[-2][1]
+    ultimoHigh=data[-2][2]
+    siguienteThigh=0
+    siguienteHigh=0
+    i=3
+    while i<len(lista_invertida):
+        siguienteHigh=lista_invertida[i][2]
+        if siguienteHigh>ultimoHigh:
+            siguienteThigh=lista_invertida[i][1]
+            break
+        i=i+1
+    if siguienteThigh!=0:#restringimos el caso en que no encuentre un estremo anterior 
+        x1=ultimoThigh
+        y1=ultimoHigh
+        x2=siguienteThigh
+        y2=siguienteHigh
+        x=mt5.symbol_info(simbolo)#now
+        x=x[10]
+        m=(y2-y1)/(x2-x1)
+        b=y2-m*x2
+        y=m*x+b
+        #if closeM5>mv and closeM5>y:
+        if closeM5>y:
+            return 'compras'    
+    #------------------------------caso compras-----------------------------------------
+    
+    #------------------------------caso ventas-----------------------------------------   
+    ultimoTlow=data[-2][3]
+    ultimoLow=data[-2][4]
+    siguienteTlow=0
+    siguienteLow=0
+    i=3
+    while i<len(lista_invertida):
+        siguienteLow=lista_invertida[i][4]
+        if siguienteLow<ultimoLow:
+            siguienteTlow=lista_invertida[i][3]
+            break
+        i=i+1
+    if siguienteTlow!=0:
+        x1=ultimoTlow
+        y1=ultimoLow
+        x2=siguienteTlow
+        y2=siguienteLow
+        x=mt5.symbol_info(simbolo)#now
+        x=x[10]
+        m=(y2-y1)/(x2-x1)
+        b=y2-m*x2
+        y=m*x+b
+        #if closeM5<mv and closeM5<y:
+        if closeM5<y:
+            return 'ventas'  
+    return 0
+    #------------------------------caso ventas-----------------------------------------  
+
+#sistema m15
+def logicaM15(simbolo,riesgo):
     comentario="M15"
     t=mt5.symbol_info(simbolo)#now
     t=t[10]
     t=(t // 60) * 60
-    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,200)))#toma de data [time,open,high,low,close...
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,100)))#toma de data [time,open,high,low,close...
     data=joponesa(data)#Dataframe 
     data=numpyAlist(data)
     data=asignarTipo(data)
@@ -656,7 +851,8 @@ def logicaM15(simbolo,riesgo):# sistema m15
             print('compra: '+comentario)
             (ordenar(1,lote,tp,sl,simbolo,comentario))                     
 
-def logicaM30(simbolo,riesgo):# sistema m30 
+# sistema m30 
+def logicaM30(simbolo,riesgo):
     comentario="M30"
     t=mt5.symbol_info(simbolo)#now
     t=t[10]
@@ -715,9 +911,10 @@ def logicaM30(simbolo,riesgo):# sistema m30
             (ordenar(1,lote,tp,sl,simbolo,comentario))
     #--------------------------caso venta-----------------------------------
 
-def logicaVectores(simbolo,riesgo):# sistema vectores
+# sistema vectores
+def logicaVectores(simbolo,riesgo):
     comentario='V'
-    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,300)))#toma de data [time,open,high,low,close...
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,100)))#toma de data [time,open,high,low,close...
     data=joponesa(data)#Dataframe 
     data=numpyAlist(data)
     data=asignarTipo(data)
@@ -816,148 +1013,11 @@ def logicaVectores(simbolo,riesgo):# sistema vectores
                 print('venta: '+comentario)
                 (ordenar(1,lote,tp,sl,simbolo,comentario))
     #------------------------------caso ventas-----------------------------------------  
-    
-#-------------------------------------Logica operaciones--------------------------------------------------    
 
-
-
-
-
-#-------------------------------------Logica Armonia Vectores---------------------------------------------
-
-def ConfirmarArmoniaVectoresM15(simbolo):
-    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M15,0,300)))#toma de data [time,open,high,low,close...
-    data=joponesa(data)#Dataframe 
-    data=numpyAlist(data)
-    data=asignarTipo(data)
-    data=agrupacionVelas(data) 
-    data=data1dimecionA2dimenciones(data)
-    data=estremosImpulsos(data)
-    data=ajusteImpusos(data)
-    precio=mt5.symbol_info_tick(simbolo).ask
-    mv=mediaMovilM15(simbolo)
-    lista_invertida = data[::-1]#data al reves
-    #------------------------------caso compras-----------------------------------------
-    ultimoThigh=data[-2][1]
-    ultimoHigh=data[-2][2]
-    siguienteThigh=0
-    siguienteHigh=0
-    i=3
-    while i<len(lista_invertida):
-        siguienteHigh=lista_invertida[i][2]
-        if siguienteHigh>ultimoHigh:
-            siguienteThigh=lista_invertida[i][1]
-            break
-        i=i+1
-    if siguienteThigh!=0:#restringimos el caso en que no encuentre un estremo anterior 
-        x1=ultimoThigh
-        y1=ultimoHigh
-        x2=siguienteThigh
-        y2=siguienteHigh
-        x=mt5.symbol_info(simbolo)#now
-        x=x[10]
-        m=(y2-y1)/(x2-x1)
-        b=y2-m*x2
-        y=m*x+b
-        if precio>mv and precio>y:
-            return 'compras'    
-    #------------------------------caso compras-----------------------------------------
-    
-    #------------------------------caso ventas-----------------------------------------   
-    ultimoTlow=data[-2][3]
-    ultimoLow=data[-2][4]
-    siguienteTlow=0
-    siguienteLow=0
-    i=3
-    while i<len(lista_invertida):
-        siguienteLow=lista_invertida[i][4]
-        if siguienteLow<ultimoLow:
-            siguienteTlow=lista_invertida[i][3]
-            break
-        i=i+1
-    if siguienteTlow!=0:
-        x1=ultimoTlow
-        y1=ultimoLow
-        x2=siguienteTlow
-        y2=siguienteLow
-        x=mt5.symbol_info(simbolo)#now
-        x=x[10]
-        m=(y2-y1)/(x2-x1)
-        b=y2-m*x2
-        y=m*x+b
-        if precio<mv and precio<y:
-            return 'ventas'  
-    return 0
-    #------------------------------caso ventas-----------------------------------------  
-
-def ConfirmarArmoniaVectoresM5(simbolo):
-    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M5,0,300)))#toma de data [time,open,high,low,close...
-    data=joponesa(data)#Dataframe 
-    data=numpyAlist(data)
-    data=asignarTipo(data)
-    data=agrupacionVelas(data) 
-    data=data1dimecionA2dimenciones(data)
-    data=estremosImpulsos(data)
-    data=ajusteImpusos(data)
-    precio=mt5.symbol_info_tick(simbolo).ask
-    mv=mediaMovilM5(simbolo)
-    lista_invertida = data[::-1]#data al reves
-    #------------------------------caso compras-----------------------------------------
-    ultimoThigh=data[-2][1]
-    ultimoHigh=data[-2][2]
-    siguienteThigh=0
-    siguienteHigh=0
-    i=3
-    while i<len(lista_invertida):
-        siguienteHigh=lista_invertida[i][2]
-        if siguienteHigh>ultimoHigh:
-            siguienteThigh=lista_invertida[i][1]
-            break
-        i=i+1
-    if siguienteThigh!=0:#restringimos el caso en que no encuentre un estremo anterior 
-        x1=ultimoThigh
-        y1=ultimoHigh
-        x2=siguienteThigh
-        y2=siguienteHigh
-        x=mt5.symbol_info(simbolo)#now
-        x=x[10]
-        m=(y2-y1)/(x2-x1)
-        b=y2-m*x2
-        y=m*x+b
-        if precio>mv and precio>y:
-            return 'compras'    
-    #------------------------------caso compras-----------------------------------------
-    
-    #------------------------------caso ventas-----------------------------------------   
-    ultimoTlow=data[-2][3]
-    ultimoLow=data[-2][4]
-    siguienteTlow=0
-    siguienteLow=0
-    i=3
-    while i<len(lista_invertida):
-        siguienteLow=lista_invertida[i][4]
-        if siguienteLow<ultimoLow:
-            siguienteTlow=lista_invertida[i][3]
-            break
-        i=i+1
-    if siguienteTlow!=0:
-        x1=ultimoTlow
-        y1=ultimoLow
-        x2=siguienteTlow
-        y2=siguienteLow
-        x=mt5.symbol_info(simbolo)#now
-        x=x[10]
-        m=(y2-y1)/(x2-x1)
-        b=y2-m*x2
-        y=m*x+b
-        if precio<mv and precio<y:
-            return 'ventas'  
-    return 0
-    #------------------------------caso ventas-----------------------------------------  
-
-def logicaArmoniaVectores(simbolo,riesgo):#sistema vectores con armonia en M5 y M15
+# sistema ARMONIA VECTORES
+def logicaArmoniaVectores(simbolo,riesgo):
     comentario='V'
-    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,300)))#toma de data [time,open,high,low,close...
+    data=pd.DataFrame((mt5.copy_rates_from_pos(simbolo,mt5.TIMEFRAME_M1,0,100)))#toma de data [time,open,high,low,close...
     data=joponesa(data)#Dataframe 
     data=numpyAlist(data)
     data=asignarTipo(data)
@@ -969,8 +1029,10 @@ def logicaArmoniaVectores(simbolo,riesgo):#sistema vectores con armonia en M5 y 
     mv=mediaMovilM1(simbolo)
     m1,close=M1(simbolo)
     lista_invertida = data[::-1]#data al reves
+    print('M5: ',ConfirmarArmoniaVectoresM5(simbolo),'  m15: ',ConfirmarArmoniaVectoresM15(simbolo))
     #------------------------------caso compras-----------------------------------------
-    if m1=='alcista' and ConfirmarArmoniaVectoresM5(simbolo)=='compras' and ConfirmarArmoniaVectoresM15(simbolo)=='compras':
+    #if m1=='alcista' and ConfirmarArmoniaVectoresM5(simbolo)=='compras' and ConfirmarArmoniaVectoresM15(simbolo)=='compras':
+    if m1=='alcista' and ConfirmarArmoniaVectoresM5(simbolo)=='compras':
         ultimoThigh=data[-2][1]
         ultimoHigh=data[-2][2]
         siguienteThigh=0
@@ -1014,7 +1076,8 @@ def logicaArmoniaVectores(simbolo,riesgo):#sistema vectores con armonia en M5 y 
     #------------------------------caso compras-----------------------------------------
     
     #------------------------------caso ventas-----------------------------------------   
-    elif m1=='bajista'and ConfirmarArmoniaVectoresM5(simbolo)=='ventas' and ConfirmarArmoniaVectoresM15(simbolo)=='ventas':
+    #elif m1=='bajista'and ConfirmarArmoniaVectoresM5(simbolo)=='ventas' and ConfirmarArmoniaVectoresM15(simbolo)=='ventas':
+    elif m1=='bajista'and ConfirmarArmoniaVectoresM5(simbolo)=='ventas':
         ultimoTlow=data[-2][3]
         ultimoLow=data[-2][4]
         siguienteTlow=0
@@ -1055,9 +1118,9 @@ def logicaArmoniaVectores(simbolo,riesgo):#sistema vectores con armonia en M5 y 
                 comentario=comentario+','+str(t)
                 print('venta: '+comentario)
                 (ordenar(1,lote,tp,sl,simbolo,comentario))
-    #------------------------------caso ventas-----------------------------------------  
+        #------------------------------caso ventas-----------------------------------------  
 
-#-------------------------------------Logica Armonia Vectores---------------------------------------------
+#-------------------------------------Logica operaciones--------------------------------------------------    
 
 
 
@@ -1100,63 +1163,21 @@ def inicio(riesgo):
         i=0
         while i<len(simbolos):
             simbolo=simbolos[i]# cada uno de los simbolos es testeado
-
             #-----todos los sistemas------
             #logicaM15(simbolo,riesgo)
             #logicaM30(simbolo,riesgo)
             #logicaVectores(simbolo,riesgo)
-            #logicaArmoniaVectores(simbolo,riesgo)
+            logicaArmoniaVectores(simbolo,riesgo)
             #-----todos los sistemas------
-
+            
             #-----como operar------
             #numeroOperacionesDia(simbolo,riesgo)
             #-----como operar------
 
+
             i=i+1
-        time.sleep(0.1)
+        time.sleep(0.25)
 #-------------------------------------restricciones y toma de datos---------------------------------------
-
-
-
-
-
-#-------------------------------------Creacion S1---------------------------------------------------------
-def S1():
-    global simbolos
-    contador=0
-    s1=[]
-    ohlc=[]
-    
-    while 1:
-        tick = mt5.symbol_info_tick(simbolos[0])
-        #print("Bid:", tick.bid)
-        #print("Ask:", tick.ask)
-        if contador<=100:
-            s1.append(tick.bid)
-        if contador>100:
-            o=s1[0]
-            h=max(s1)
-            l=min(s1)
-            c=s1[0-1]
-            s1=[]
-            aux=[o,h,l,c]
-            ohlc.append(aux)
-            contador=0
-        contador=contador+1
-        #------------convertir S1 en impulsos------------------
-        '''
-        if len(ohlc)>2:
-            data=asignarTipo(ohlc)
-            data=agrupacionVelas(data) #list[´alcista´,h,l,h,l,h,l]
-            data=estremosImpulsos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
-            data=data1dimecionA2dimenciones(data)#list[[´alcista´,h,l],['bajista',h,l]]
-            data=ajusteImpusos(data)#list[´alcista´,h,l,'bajista',h,l,'alcista',h,l]
-            print(data)
-        '''
-        #------------convertir S1 en impulsos------------------
-
-        time.sleep(0.01)     
-#-------------------------------------Creacion S1---------------------------------------------------------
 
 
 
@@ -1172,8 +1193,8 @@ simbolos=['NAS100']
 
 
 #-----------------------------------------variblesCuenta--------------------------------------------------------
-cuenta=61143461
-contraseña="xc7ynBa3"
+cuenta=61165146
+contraseña="oshW6vwl"
 servidor="mt5-demo01.pepperstone.com"
 ruta="C:/Users/adjua/Desktop/Terminales/Terminal_Pruebas/terminal64.exe"#ruta terminal
 #-----------------------------------------variblesCuenta--------------------------------------------------------
@@ -1202,7 +1223,5 @@ hilo3 = threading.Thread(target=be)
 hilo1.start()
 hilo2.start()
 hilo3.start()
-
-
 #------------------------------------------hilos----------------------------------------------------------
 
