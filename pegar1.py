@@ -2,34 +2,26 @@ import os
 import MetaTrader5 as mt5
 import pickle as pi
 import time
-import threading
 
 
 
-
-'''
-mensaje="cuenta pruebas pegar: "
-cuenta=61144878
-contraseña="Pyqmpag3"
-servidor="mt5-demo01.pepperstone.com"
-rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/pegar1/terminal64.exe')#ruta terminal
-rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
-autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
-'''
-
-
-#---------------------------------------------DATOS PEGAR1--------------------------------------------
-mensaje="cuenta pegar1 JOSE: "
-cuenta=300415148
-contraseña="etg8xf95j2"
-servidor="TradersGlobalGroup-Demo"
+#---------------------------------------------DATOS CUENTA PEGAR--------------------------------------------
+mensaje="cuenta pegar1 mia: "
+cuenta=51254060
+contraseña="9s5TSJxI"
+servidor="ICMarketsSC-Demo"
 rutaTerminal=os.path.join(os.path.dirname(os.path.abspath(__file__)),'terminales/pegar1/terminal64.exe')#ruta terminal
 rutaDatos=os.path.join(os.path.dirname(os.path.abspath(__file__)),'DATA')#ruta data
 autorizar=mt5.initialize(rutaTerminal,login=cuenta,Password=contraseña,server=servidor)
 
-#-----------------------------------------------------------------------------------------------------
+#/--------------------------------------------DATOS CUENTA PEGAR--------------------------------------------
+
+
+
 if autorizar:
-    print(mensaje+str(cuenta))
+    balance=mt5.account_info() #tamaño de la cuenta actual
+    balance=balance[13]         #tamaño de la cuenta actual
+    print(mensaje+'\ncuenta: '+str(cuenta)+'\nbalance: '+str(balance))
 else:
     print("error el terminal", mt5.last_error())
     quit()
@@ -39,10 +31,61 @@ try:
 except:
     1
 
+def copiarOrden(rutaDatos):
+    trades=[]# [ticketPrincipal,ticketSegundario,tipo,sl,tp,lote,simbolo,]
+    while 1:
+        try:
+            data=open(rutaDatos,"rb")#abrimos en lectura
+            data=pi.load(data)#pasamos de binario a list
+            if len(data) > len(trades):#nueva orden 
+                x=[]
+                ope=data[-1]
+                tikect=ope[0]
+                simbolo=ope[1]
+                #-------calculo lotage----------
+                cuenta=ope[-1]#tamaño cuenta principal
+                lote=ope[2]   #lote de orden cuenta principal
+                lotePorcieto=(lote/cuenta)*100
+                cuenta=mt5.account_info() #tamaño de la cuenta actual
+                cuenta=cuenta[13]         #tamaño de la cuenta actual
+                lote=lotePorcieto*cuenta/100 
+                if lote<0.1:
+                    lote=0.1
+                lote=round(lote,1)
+                #-----------------------------
+                if simbolo=="NDX100":
+                    simbolo="USTEC"
+                sl=ope[3]
+                tp=ope[4]
+                tipo=ope[5]
+                operacion=ordenar(simbolo,lote,sl,tp,tipo)
+                #-----------informarcion de la orden------------------
+                print(operacion)
+                print("-------------------------------")
+                #-----------------------------------------------------
+                x.append(tikect)
+                x.append(operacion[2])  
+                x.append(operacion[10][10])
+                x.append(operacion[10][7])
+                x.append(operacion[10][8])
+                x.append(operacion[10][4])
+                x.append(operacion[10][3])
+                x.append(operacion[10][5])
+                trades.append(x)
 
+            if len(data)>0: 
+                modificando(data,trades)#cambia el tp y el stop si han cambiado
+
+            if len(data) < len(trades):#se cerro orden
+                trades=queOrdenSeCerro(data,trades)
+            time.sleep(0.2) 
+        except:
+            time.sleep(0.2)
+
+            
 def ordenar(simbolo,lote,sl,tp,tipo):#monta orden en el mercado
     precio=mt5.symbol_info_tick(simbolo).ask
-    deviation = 30
+    deviation = 10
     if tipo==1:
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
@@ -54,7 +97,7 @@ def ordenar(simbolo,lote,sl,tp,tipo):#monta orden en el mercado
             "tp": tp,
             "deviation": int(deviation),
             "magic": int(235000),
-            "comment": "python script open",
+            "comment": "",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
@@ -75,7 +118,7 @@ def ordenar(simbolo,lote,sl,tp,tipo):#monta orden en el mercado
             "tp": tp,
             "deviation": int(deviation),
             "magic": int(235000),
-            "comment": "python script open",
+            "comment": "",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
@@ -99,7 +142,7 @@ def cerrarOrden(simbolo,ticket,lote,tipo):
             "tp": 0.0,
             "deviation": int(deviation),
             "magic": int(235000),
-            "comment": "python script open",
+            "comment": "",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
@@ -119,7 +162,7 @@ def cerrarOrden(simbolo,ticket,lote,tipo):
             "tp": 0.0,
             "deviation": int(deviation),
             "magic": int(235000),
-            "comment": "python script open",
+            "comment": "",
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
@@ -145,15 +188,50 @@ def modificando(data,trades):# compara el sl y el tp de cada orden
         ope=data[i]             
         slData=ope[3]
         tpData=ope[4]
+        precioData=ope[7]
+        puntosSLData=0
+        puntosTPData=0
+        puntosSLTrades=0
+        puntosTPTrades=0
+        tipo=ope[5]
         simbolo=ope[1]
         ope=trades[i]
-        tikectTrades=ope[1]#tickec de orden, cuenta segundaria             
+        tikectTrades=ope[1]#tickec de orden, cuenta segundaria
+        precioTrade=ope[7]          
         slTrades=ope[3]
         tpTrades=ope[4]
-        if slTrades != slData or tpTrades != tpData:
-            modificar(simbolo,tikectTrades,slData,tpData)
-        if slData == 0 or tpData == 0:
-            modificar(simbolo,tikectTrades,slData,tpData)
+        
+        
+        #VARIABLES DE DATOS CUENTA COPIAR (precioData tpData slData)
+        #print(tpData,slData)
+        #print(ope)
+        #--------calculo de puntos------
+        if tipo==0:
+            puntosSLData=precioData-slData
+            puntosTPData=tpData-precioData 
+            sl=precioTrade-puntosSLData
+            tp=precioTrade+puntosTPData
+            puntosTPTrades=tpTrades-precioTrade
+            puntosSLTrades=precioTrade-slTrades
+
+            
+        elif tipo==1:
+            puntosSLData=slData-precioData
+            puntosTPData=precioData-tpData 
+            sl=precioTrade+puntosSLData
+            tp=precioTrade-puntosTPData
+            puntosTPTrades=precioTrade-tpTrades
+            puntosSLTrades=slTrades-precioTrade
+        
+        #--------calculo de puntos------
+    
+        if puntosSLTrades != puntosSLData or puntosTPTrades != puntosTPData:
+            modificar(simbolo,tikectTrades,sl,tp)
+        if slData == 0.0 and slTrades!=0.0: # caso cuando se elimina el SL
+            modificar(simbolo,tikectTrades,0.0,tp)
+        if tpData == 0.0 and tpTrades!=0.0:# caso cuando se elimina el TP
+            modificar(simbolo,tikectTrades,sl,0.0)
+
         i=i+1
 
 def queOrdenSeCerro(data,trades):
@@ -189,49 +267,6 @@ def queOrdenSeCerro(data,trades):
  
     return trades
 
-def copiarOrden(rutaDatos):
-    trades=[]# [ticketPrincipal,ticketSegundario,tipo,sl,tp,lote,simbolo,]
-    while 1:
-        try:
-            data=open(rutaDatos,"rb")#abrimos en lectura
-            data=pi.load(data)#pasamos de binario a list
-            if len(data) > len(trades):#nueva orden 
-                x=[]
-                ope=data[-1]
-                tikect=ope[0]
-                simbolo=ope[1]
-                #-------calculo lotage----------
-                cuenta=ope[-1]#tamaño cuenta principal
-                lote=ope[2]   #lote de orden cuenta principal
-                lotePorcieto=(lote/cuenta)*100
-                cuenta=mt5.account_info() #tamaño de la cuenta actual
-                cuenta=cuenta[13]         #tamaño de la cuenta actual
-                lote=lotePorcieto*cuenta/100 
-                if lote<0.1:
-                    lote=0.1
-                lote=round(lote,1)
-                #-----------------------------
-                sl=ope[3]
-                tp=ope[4]
-                tipo=ope[5]
-                operacion=ordenar(simbolo,lote,sl,tp,tipo) 
-                x.append(tikect)
-                x.append(operacion[2])  
-                x.append(operacion[10][10])
-                x.append(operacion[10][7])
-                x.append(operacion[10][8])
-                x.append(operacion[10][4])
-                x.append(operacion[10][3])
-                trades.append(x)
-    
-            if len(data)>0:
-                modificando(data,trades)#cambia el tp y el stop si han cambiado
-            
-            if len(data) < len(trades):#se cerro orden
-                trades=queOrdenSeCerro(data,trades)
-            time.sleep(0.2)
-        except:
-            time.sleep(0.2)
+
 
 copiarOrden(rutaDatos)
- 
